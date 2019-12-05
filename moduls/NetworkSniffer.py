@@ -1,6 +1,5 @@
 
 import struct
-import textwrap
 import socket
 from contextlib import closing
 
@@ -55,21 +54,36 @@ class NetworkSniffer:
             '! H H 2x H', data[:8])
         return data[8:]
 
-    def format_output_line(prefix, string, size=80):
-        size -= len(prefix)
-        if isinstance(string, bytes):
-            string = ''.join(r'\x{:02x}'.format(byte) for byte in string)
-            if size % 2:
-                size -= 1
-                return '\n'.join(
-                    [prefix + line for line in textwrap.wrap(string, size)])
-
-    def get_TCP_packet(self, raw_data):
+    def get_TCP_packet(self, data):
+        # necessary path header
         self.src_port_tcp, self.dest_port_tcp, self.sequence, \
-            self.acknowledgment, self.flag_urg, self.flag_ack, \
-            self.flag_psh, self.flag_rst, self.flag_syn, \
-            self.flag_fin = struct.unpack(
-                '! H H L L H H H H H H', raw_data[:24])
+            self.acknowledgment, self.data_size_and_flags, \
+            self.window_size, self.checksum, \
+            self.urgent_pointer = struct.unpack(
+                '! H H L L H H H H', data[:20])
+        bites_data_size_and_flags = bin(self.data_size_and_flags)[2:]
+        self.header_size = int(bites_data_size_and_flags[:5], 2)
+        flag_sequense = bites_data_size_and_flags[8:]
+        self.flag = self.convert_flag(flag_sequense)
+        return data[self.header_size:]
+
+    def convert_flag(self, flag_code):
+        dict_flags = {
+            1: "NS",
+            2: "CWR",
+            3: "ECE",
+            4: "URG",
+            5: "ACK",
+            6: "PSH",
+            7: "RST",
+            8: "SYN",
+            9: "FIN"
+        }
+        flags = ""
+        for i in range(1, len(flag_code)):
+            if flag_code[i] == "1":
+                flags += dict_flags[i] + " "
+        return flags
 
     def get_packets(self, max_packets):
         with closing(socket.socket(
@@ -83,7 +97,7 @@ class NetworkSniffer:
                     if self.proto == 1:
                         data = self.get_icmp_packet(data)
                     elif self.proto == 6:
-                        self.get_TCP_packet(raw_data)
+                        self.get_TCP_packet(data)
                     elif self.proto == 17:
                         data = self.get_udp_packet(data)
                 self.data = data

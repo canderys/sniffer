@@ -12,16 +12,30 @@ from contextlib import contextmanager
 
 
 def parse_args(args):
+    settings_argument_group = ['link', 'view', 'data']
     parser = argparse.ArgumentParser(description='sniffer on raw sockets')
     parser.add_argument(
         '--output', '-o', help='output file name, saves in pcap format')
     parser.add_argument('--maxpackets', '-m', type=int,
                         help='maximum number of packets')
-    return parser.parse_args(args)
+    output_settings = parser.add_argument_group('output settings')
+    output_settings.add_argument(
+        '--link', '-l', action='store_true', help='display link layer data')
+    output_settings.add_argument(
+        '--view', '-v', action='store_true',
+        help='display detailed information')
+    output_settings.add_argument(
+        '--data', '-d', action='store_true',
+        help='display information with packet data')
+    return parser.parse_args(args), settings_argument_group
 
 
 @contextmanager
-def parsing_arguments(parser):
+def parsing_arguments(parser, settings_argument_group):
+    actual_settings_argument = []
+    for argument in settings_argument_group:
+        if vars(parser)[argument]:
+            actual_settings_argument.append(argument)
     try:
         output = sys.stdout
         if parser.output:
@@ -32,19 +46,21 @@ def parsing_arguments(parser):
                 raise IncorrectInputError(
                     "  maximum number of packets must be greater than 0")
             maxpackets = parser.maxpackets
-        yield output, maxpackets
+        yield output, maxpackets, actual_settings_argument
     finally:
         output.close()
 
 
 def run(argv):
-    print(os.name)
-    parser = parse_args(argv)
-    with parsing_arguments(parser) as arguments:
+    if os.name == 'nt':
+        raise IncorrectOsError("windows unsupported")
+    parser, parsed_settings_argument = parse_args(argv)
+    with parsing_arguments(parser, parsed_settings_argument) as arguments:
         output = arguments[0]
         maxpackets = arguments[1]
+        settings_argument = arguments[2]
         network_sniffer = NetworkSniffer()
-        network_writer = NetworkWriter()
+        network_writer = NetworkWriter(settings_argument)
         is_pcap_write = False
         if output is not sys.stdout:
             is_pcap_write = True
