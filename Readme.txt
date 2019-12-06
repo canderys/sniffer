@@ -10,6 +10,6 @@ information about received packets is output to a file in pcap format
     а-ля hexdump(Сделано)
     3.Сохранение в формат .pcap(Сделано)
     (*)
-	4.Подправить вывод
-
+	4.Подправить вывод(Сделано)
+	5.Добавить возможность в NetworkSniffer читать данные из буффера(что то с read)
 

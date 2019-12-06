@@ -6,17 +6,9 @@ from contextlib import closing
 
 class NetworkSniffer:
 
-    def __init__(self, proto=socket.ntohs(3)):
+    def __init__(self, proto=socket.ntohs(3), input_buffer=None):
         self.proto = proto
-        self.TAB1 = '\t - '
-        self.TAB2 = '\t\t - '
-        self.TAB3 = '\t\t\t - '
-        self.TAB4 = '\t\t\t\t - '
-
-        self.DATA_TAB_1 = '\t   '
-        self.DATA_TAB_2 = '\t\t   '
-        self.DATA_TAB_3 = '\t\t\t   '
-        self.DATA_TAB_4 = '\t\t\t\t   '
+        self.input_buffer = input_buffer
 
     def get_ethernet_header(self, data):
         dest_mac, source_mac, ether_type = struct.unpack(
